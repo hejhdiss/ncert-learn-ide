@@ -21,7 +21,7 @@ int main() {
     char python_path[MAX_PATH];
     char script_path[MAX_PATH];
 
-    snprintf(python_path, sizeof(python_path), "%s\\python\\python.exe", exe_path); // Assuming python.exe is in the same folder
+    snprintf(python_path, sizeof(python_path), "%s\\runner\\python.exe", exe_path); // Assuming python.exe is in the same folder
     snprintf(script_path, sizeof(script_path), "%s\\ncert_learn_ide.py", exe_path); // Assuming ncert_learn_ide.py is in the same folder
 
     // Prepare the command to run

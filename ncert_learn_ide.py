@@ -46,6 +46,8 @@ class NCERTLearnIDE:
         self.tab_control = ttk.Notebook(self.root)
         self.tab_control.pack(expand=1, fill="both")
         self.root.bind("<F5>", self.run_file_key)
+        
+
 
     def new_file(self):
         new_tab = self.create_tab("Untitled")
@@ -130,14 +132,14 @@ class NCERTLearnIDE:
         script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
 
         # Ensure correct paths for Python, GCC, and G++
-        python_path = os.path.join(script_dir, "python", "python.exe")
+        python_path = os.path.join(script_dir, "python","venv","Scripts", "python.exe")
         gcc_path = os.path.join(script_dir, "gcc", 'bin', "gcc.exe")
         gpp_path = os.path.join(script_dir, "gcc", 'bin', "g++.exe")
         self.write_paths_to_files(file_path, gcc_path, gpp_path)
 
         # Check if executables exist
         if not os.path.exists(python_path):
-            self.show_terminal_output("", f"Python executable not found at {python_path}", current_tab)
+            self.show_terminal_output("", f"Python executable not found at {python_path}/nPLease use NCERT Learn IDE Reset Python Environmet to restore python environment.", current_tab)
             return
         if not os.path.exists(gcc_path):
             self.show_terminal_output("", f"GCC executable not found at {gcc_path}", current_tab)
@@ -157,6 +159,7 @@ class NCERTLearnIDE:
 
         # Running Python file
         elif file_path.endswith(".py"):
+            self.save_file()
             try:
                 # Use a list for arguments to avoid issues with spaces in paths
                 process = subprocess.run(
@@ -165,22 +168,25 @@ class NCERTLearnIDE:
                     stderr=subprocess.PIPE,
                     text=True
                 )
-                self.show_terminal_output(process.stdout, process.stderr, current_tab)
+                self.show_terminal_output(f'>>>{process.stdout}', process.stderr, current_tab)
             except Exception as e:
                 self.show_terminal_output("", f"Failed to run Python file: {str(e)}", current_tab)
 
         # Running HTML file
         elif file_path.endswith(".html"):
+            self.save_file()
             os.startfile(file_path)
 
         # Compile and run C file using GCC in PowerShell
         elif file_path.endswith(".c"):
+            self.save_file()
             self.show_terminal_output("Use Ncert Learn IDE C Runner To Get Result.\n", "", current_tab)
             
 
 
         # Compile and run C++ file using G++ in PowerShell
         elif file_path.endswith(".cpp"):
+            self.save_file()
             self.show_terminal_output("Use Ncert Learn IDE C++ Runner To Get Result.\n", "", current_tab)
             
 
@@ -319,15 +325,25 @@ class NCERTLearnIDE:
         text_widget = tk.Text(frame, wrap="none", undo=True)
         text_widget.pack(side="left", expand=1, fill="both", padx=5, pady=5)
         frame.text_widget = text_widget
+        # Add auto-completion for Python files
+        if file_path.endswith(".py"):
+            text_widget.bind("<KeyRelease>", lambda event: self.pyautocomplete(event, text_widget))
+        if file_path.endswith((".html", ".css", ".js",".xml")):
+            text_widget.bind("<KeyRelease>", lambda event: self.htmlautocomplete(event, text_widget))
+        if file_path.endswith((".c", ".cpp")):
+            text_widget.bind("<KeyRelease>", lambda event: self.cautocomplete(event, text_widget))
+        if file_path.endswith(".xml"):
+            text_widget.bind("<KeyRelease>", lambda event: self.xmlautocomplete(event, text_widget))
+
 
         # Define the tags for highlighting with advanced colors
-        text_widget.tag_configure("keyword", foreground="#0000CD", font=("Arial", 10, "bold"))
-        text_widget.tag_configure("comment", foreground="#006400", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("keyword", foreground="#0000CD")
+        text_widget.tag_configure("comment", foreground="#006400")
         text_widget.tag_configure("string", foreground="#8B0000")
-        text_widget.tag_configure("function", foreground="#8A2BE2", font=("Arial", 10, "italic"))
-        text_widget.tag_configure("class", foreground="#00008B", font=("Arial", 10, "bold"))
-        text_widget.tag_configure("import_lib", foreground="#20B2AA", font=("Arial", 10, "bold"))
-        text_widget.tag_configure("import_func", foreground="#FF6347", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("function", foreground="#8A2BE2")
+        text_widget.tag_configure("class", foreground="#00008B")
+        text_widget.tag_configure("import_lib", foreground="#20B2AA")
+        text_widget.tag_configure("import_func", foreground="#FF6347")
         text_widget.tag_configure("variable", foreground="#006400")
         text_widget.tag_configure("number", foreground="#FF1493")
         text_widget.tag_configure("operator", foreground="#FF4500")
@@ -336,32 +352,40 @@ class NCERTLearnIDE:
         text_widget.tag_configure("html_comment", foreground="#808080")
         text_widget.tag_configure("html_string", foreground="#DC143C")
         text_widget.tag_configure("js_keyword", foreground="#0000CD")
-        text_widget.tag_configure("js_function", foreground="#32CD32", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("js_function", foreground="#32CD32")
         text_widget.tag_configure("js_comment", foreground="#2F4F4F")
         # Syntax highlighting tags for C and C++ files
-        text_widget.tag_configure("c_keyword", foreground="#0000CD", font=("Arial", 10, "bold"))
-        text_widget.tag_configure("c_comment", foreground="#006400", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("c_keyword", foreground="#0000CD")
+        text_widget.tag_configure("c_comment", foreground="#006400")
         text_widget.tag_configure("c_string", foreground="#8B0000")
-        text_widget.tag_configure("c_function", foreground="#8A2BE2", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("c_function", foreground="#8A2BE2")
         text_widget.tag_configure("c_number", foreground="#FF1493")
         text_widget.tag_configure("c_operator", foreground="#FF4500")
         text_widget.tag_configure("css_selector", foreground="#00008B")
-        text_widget.tag_configure("css_property", foreground="#8A2BE2", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("css_property", foreground="#8A2BE2")
         text_widget.tag_configure("css_value", foreground="#FF4500")
-        text_widget.tag_configure("css_comment", foreground="#006400", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("css_comment", foreground="#006400")
 
         # Syntax highlighting tags for Markdown files
-        text_widget.tag_configure("markdown_header", foreground="#00008B", font=("Arial", 12, "bold"))
-        text_widget.tag_configure("markdown_bold", foreground="#8B0000", font=("Arial", 10, "bold"))
-        text_widget.tag_configure("markdown_italic", foreground="#006400", font=("Arial", 10, "italic"))
+        text_widget.tag_configure("markdown_header", foreground="#00008B")
+        text_widget.tag_configure("markdown_bold", foreground="#8B0000")
+        text_widget.tag_configure("markdown_italic", foreground="#006400")
 
         # Syntax highlighting tags for JSON and XML
-        text_widget.tag_configure("json_key", foreground="#8A2BE2", font=("Arial", 10, "bold"))
+        text_widget.tag_configure("json_key", foreground="#8A2BE2")
         text_widget.tag_configure("json_string", foreground="#8B0000")
         text_widget.tag_configure("json_number", foreground="#FF1493")
         text_widget.tag_configure("xml_tag", foreground="#A52A2A")
         text_widget.tag_configure("xml_attr", foreground="#D2691E")
         text_widget.tag_configure("xml_string", foreground="#DC143C")
+        # Define tags for special characters like () [] {} <>
+        text_widget.tag_configure("double_quotes", foreground="#FF1493")  # For ""
+        text_widget.tag_configure("single_quotes", foreground="#8A2BE2")  # For ''
+        text_widget.tag_configure("triple_double_quotes", foreground="#32CD32")  # For """ """
+        text_widget.tag_configure("triple_single_quotes", foreground="#FFD700")  # For ''' '''
+        text_widget.tag_configure("html_tag", foreground="#A52A2A")  # For < >
+        text_widget.tag_configure("html_end_tag", foreground="#A52A2A")  # For </>
+
 
         # Insert content if available
         if content:
@@ -385,18 +409,27 @@ class NCERTLearnIDE:
         # Position the horizontal buttons at the bottom
         left_button.pack(side="bottom", padx=5, anchor="w")
         right_button.pack(side="bottom", padx=5, anchor="e")
-        
+
         run_button = ttk.Button(frame, text="Run", command=lambda: self.run_file())
         run_button.pack(side="bottom", pady=(10, 5))
+        increase_button = ttk.Button(frame, text="+", command=lambda: self.increase_font_size(text_widget))
+        decrease_button = ttk.Button(frame, text="-", command=lambda: self.decrease_font_size(text_widget))
+
+# Position the buttons on the top right corner
+        increase_button.pack(side="top", padx=5, pady=5, anchor="ne")
+        decrease_button.pack(side="top", padx=5, pady=5, anchor="ne")
 
         # Enable mouse scroll wheel to work with the Text widget (for vertical scrolling)
         text_widget.bind("<MouseWheel>", lambda event: self.on_mouse_wheel(event, text_widget))
+        text_widget.bind("<Control-s>", lambda event: self.save_file())
+        text_widget.bind("<F5>", lambda event: self.run_file())
 
         # Set the tab title based on the file name or "Untitled"
         tab_name = os.path.basename(file_path) if file_path != "Untitled" else "Untitled"
 
         # Add the tab to the notebook with a close button
         self.tab_control.add(frame, text=tab_name)
+
 
         # Create a close button and attach it to the tab
         close_button = tk.Button(
@@ -413,8 +446,343 @@ class NCERTLearnIDE:
 
         # Return the created frame
         return frame
+    def increase_font_size(self, text_widget):
+        current_font = text_widget.cget("font")  # Get the current font setting
+        if current_font:
+            font_parts = current_font.split()
+            if len(font_parts) > 1:
+                current_size = int(font_parts[1])  # Get current font size from the second element
+            else:
+                current_size = 10  # Default font size if not found
+        else:
+            current_size = 10  # Default font size if no font is set
 
-# Define the function to run the script (this can vary depending on the file type)
+        new_size = current_size + 2  # Increase font size by 2
+        text_widget.config(font=("Arial", new_size))  # Set the new font size
+
+    def decrease_font_size(self, text_widget):
+        current_font = text_widget.cget("font")  # Get the current font setting
+        if current_font:
+            font_parts = current_font.split()
+            if len(font_parts) > 1:
+                current_size = int(font_parts[1])  # Get current font size from the second element
+            else:
+                current_size = 10  # Default font size if not found
+        else:
+            current_size = 10  # Default font size if no font is set
+
+        new_size = current_size - 2  # Decrease font size by 2
+        if new_size >= 6:  # Ensure the font size doesn't go too small
+            text_widget.config(font=("Arial", new_size))  # Set the new font size
+    def xmlautocomplete(self, event, text_widget):
+        """
+        Automatically complete parentheses, brackets, braces, and quotes when typing in Python files.
+        Places the cursor between the opening and closing characters after insertion.
+        Handles backspace correctly.
+        """
+        char = event.char  # Get the character typed
+        cursor_index = text_widget.index(tk.INSERT)  # Get the current cursor position
+
+        # Define pairs of opening and closing characters
+        matching_pairs = {
+            '<': '>',
+            '<>': '</>',
+            '<!--':' -->',
+            '"': '"',
+            "'": "'",
+            '(': ')',
+            '[': ']',
+            '{': '}',
+            '<?': '?>',
+            '<!': '>',
+            '<?xml:':'?>',
+            '<?':'?>',
+            
+
+        }
+
+        # If the character is an opening character
+        if char in matching_pairs:
+            if char == '<':  # Special handling for '<' which can lead to tag insertion
+                text_widget.insert(cursor_index, matching_pairs[char])
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent default insert behavior for opening '<'
+            else:
+                # Insert the closing character for the respective pair
+                text_widget.insert(cursor_index, matching_pairs[char])
+                # Move the cursor back between the characters
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent the default insert behavior
+
+        # If the character is a closing character (e.g., ')', '>', '"', etc.)
+        elif char in matching_pairs.values():
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # If the previous character is the corresponding opening character, do not insert the closing character
+            if prev_char in matching_pairs and matching_pairs[prev_char] == char:
+                return "break"  # Prevent inserting the closing character
+
+        # Handle backspace behavior for matching pairs (single characters and HTML tags)
+        if event.keysym == 'BackSpace':
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # Handle backspace for single character pairs (like '(', '[', etc.)
+            if prev_char in matching_pairs:
+                next_char = text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c")
+                if next_char == matching_pairs[prev_char]:  # If it's the matching closing character
+                    text_widget.delete(f"{cursor_index} - 1c", f"{cursor_index} + 2c")
+                    text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                    return "break"  # Stop the default backspace behavior
+
+            # Handle backspace for HTML tag pairs (like '<div>' and '</div>', etc.)
+            if prev_char == '>' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<':
+                # This is the closing tag, delete both opening and closing tag
+                text_widget.delete(f"{cursor_index} - 2c", f"{cursor_index} + 1c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 2c")
+                return "break"
+
+            elif prev_char == '-' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<' and text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c") == '-':
+                # This is the comment end '-->', delete both start and end
+                text_widget.delete(f"{cursor_index} - 4c", f"{cursor_index} + 3c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 4c")
+                return "break"
+
+        return None   # Prevent inserting the closing character if it's already matched
+
+
+    def htmlautocomplete(self, event, text_widget):
+        """
+        Automatically complete parentheses, brackets, braces, and quotes when typing in Python files.
+        Places the cursor between the opening and closing characters after insertion.
+        Handles backspace correctly.
+        """
+        char = event.char  # Get the character typed
+        cursor_index = text_widget.index(tk.INSERT)  # Get the current cursor position
+
+        # Define pairs of opening and closing characters
+        matching_pairs = {
+            '<': '>',
+            '<>': '</>',
+            '<!--':' -->',
+            '"': '"',
+            "'": "'",
+            '(': ')',
+            '[': ']',
+            '{': '}',
+            '<!DOCTYPE': '>',
+            '<!DOCTYPE html': '>',
+            '<!DOCTYPE html PUBLIC': '>',
+            '<!DOCTYPE html SYSTEM': '>',
+            '<!DOCTYPE svg': '>',            
+            '<!DOCTYPE svg PUBLIC': '>',            
+            '<!DOCTYPE svg SYSTEM': '>',            
+            '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"': '>',
+            '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"': '>',
+            '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"': '>',
+            '<!':'>',
+            '<!DOCTYPE': '>',
+            '<!ELEMENT': '>',
+            '<!ATTLIST': '>',
+            '<!ENTITY': '>',
+            '<!NOTATION': '>',
+            '<!ELEMENT': '>',
+            '<!ATTLIST': '>',
+            '<!ENTITY': '>',
+            '<!NOTATION': '>', 
+            
+
+        }
+
+        # If the character is an opening character
+        if char in matching_pairs:
+            if char == '<':  # Special handling for '<' which can lead to tag insertion
+                text_widget.insert(cursor_index, matching_pairs[char])
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent default insert behavior for opening '<'
+            else:
+                # Insert the closing character for the respective pair
+                text_widget.insert(cursor_index, matching_pairs[char])
+                # Move the cursor back between the characters
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent the default insert behavior
+
+        # If the character is a closing character (e.g., ')', '>', '"', etc.)
+        elif char in matching_pairs.values():
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # If the previous character is the corresponding opening character, do not insert the closing character
+            if prev_char in matching_pairs and matching_pairs[prev_char] == char:
+                return "break"  # Prevent inserting the closing character
+
+        # Handle backspace behavior for matching pairs (single characters and HTML tags)
+        if event.keysym == 'BackSpace':
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # Handle backspace for single character pairs (like '(', '[', etc.)
+            if prev_char in matching_pairs:
+                next_char = text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c")
+                if next_char == matching_pairs[prev_char]:  # If it's the matching closing character
+                    text_widget.delete(f"{cursor_index} - 1c", f"{cursor_index} + 2c")
+                    text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                    return "break"  # Stop the default backspace behavior
+
+            # Handle backspace for HTML tag pairs (like '<div>' and '</div>', etc.)
+            if prev_char == '>' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<':
+                # This is the closing tag, delete both opening and closing tag
+                text_widget.delete(f"{cursor_index} - 2c", f"{cursor_index} + 1c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 2c")
+                return "break"
+
+            elif prev_char == '-' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<' and text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c") == '-':
+                # This is the comment end '-->', delete both start and end
+                text_widget.delete(f"{cursor_index} - 4c", f"{cursor_index} + 3c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 4c")
+                return "break"
+
+        return None   # Prevent inserting the closing character if it's already matched
+
+   
+    def pyautocomplete(self, event, text_widget):
+        """
+        Automatically complete parentheses, brackets, braces, and quotes when typing in Python files.
+        Places the cursor between the opening and closing characters after insertion.
+        Handles backspace correctly.
+        """
+        char = event.char  # Get the character typed
+        cursor_index = text_widget.index(tk.INSERT)  # Get the current cursor position
+
+        # Define pairs of opening and closing characters
+        matching_pairs = {
+            '(': ')',
+            '[': ']',
+            '{': '}',
+            "'": "'",
+            '"': '"',
+            '"""':'"""'
+        }
+
+        # If the character is an opening character
+           # If the character is an opening character
+        if char in matching_pairs:
+            if char == '<':  # Special handling for '<' which can lead to tag insertion
+                text_widget.insert(cursor_index, matching_pairs[char])
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent default insert behavior for opening '<'
+            else:
+                # Insert the closing character for the respective pair
+                text_widget.insert(cursor_index, matching_pairs[char])
+                # Move the cursor back between the characters
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent the default insert behavior
+
+        # If the character is a closing character (e.g., ')', '>', '"', etc.)
+        elif char in matching_pairs.values():
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # If the previous character is the corresponding opening character, do not insert the closing character
+            if prev_char in matching_pairs and matching_pairs[prev_char] == char:
+                return "break"  # Prevent inserting the closing character
+
+        # Handle backspace behavior for matching pairs (single characters and HTML tags)
+        if event.keysym == 'BackSpace':
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # Handle backspace for single character pairs (like '(', '[', etc.)
+            if prev_char in matching_pairs:
+                next_char = text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c")
+                if next_char == matching_pairs[prev_char]:  # If it's the matching closing character
+                    text_widget.delete(f"{cursor_index} - 1c", f"{cursor_index} + 2c")
+                    text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                    return "break"  # Stop the default backspace behavior
+
+            # Handle backspace for HTML tag pairs (like '<div>' and '</div>', etc.)
+            if prev_char == '>' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<':
+                # This is the closing tag, delete both opening and closing tag
+                text_widget.delete(f"{cursor_index} - 2c", f"{cursor_index} + 1c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 2c")
+                return "break"
+
+            elif prev_char == '-' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<' and text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c") == '-':
+                # This is the comment end '-->', delete both start and end
+                text_widget.delete(f"{cursor_index} - 4c", f"{cursor_index} + 3c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 4c")
+                return "break"
+
+        return None   # Prevent inserting the closing character if it's already matched
+    def cautocomplete(self, event, text_widget):
+        """
+        Automatically complete parentheses, brackets, braces, and quotes when typing in Python files.
+        Places the cursor between the opening and closing characters after insertion.
+        Handles backspace correctly.
+        """
+        char = event.char  # Get the character typed
+        cursor_index = text_widget.index(tk.INSERT)  # Get the current cursor position
+
+        # Define pairs of opening and closing characters
+        matching_pairs = {
+            '(': ')',
+            '[': ']',
+            '{': '}',
+            "'": "'",
+            '"': '"',
+            '<':'>'
+
+        }
+
+        # If the character is an opening character
+           # If the character is an opening character
+        if char in matching_pairs:
+            if char == '<':  # Special handling for '<' which can lead to tag insertion
+                text_widget.insert(cursor_index, matching_pairs[char])
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent default insert behavior for opening '<'
+            else:
+                # Insert the closing character for the respective pair
+                text_widget.insert(cursor_index, matching_pairs[char])
+                # Move the cursor back between the characters
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                return "break"  # Prevent the default insert behavior
+
+        # If the character is a closing character (e.g., ')', '>', '"', etc.)
+        elif char in matching_pairs.values():
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # If the previous character is the corresponding opening character, do not insert the closing character
+            if prev_char in matching_pairs and matching_pairs[prev_char] == char:
+                return "break"  # Prevent inserting the closing character
+
+        # Handle backspace behavior for matching pairs (single characters and HTML tags)
+        if event.keysym == 'BackSpace':
+            prev_char = text_widget.get(f"{cursor_index} - 1c", cursor_index)
+
+            # Handle backspace for single character pairs (like '(', '[', etc.)
+            if prev_char in matching_pairs:
+                next_char = text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c")
+                if next_char == matching_pairs[prev_char]:  # If it's the matching closing character
+                    text_widget.delete(f"{cursor_index} - 1c", f"{cursor_index} + 2c")
+                    text_widget.mark_set(tk.INSERT, f"{cursor_index} - 1c")
+                    return "break"  # Stop the default backspace behavior
+
+            # Handle backspace for HTML tag pairs (like '<div>' and '</div>', etc.)
+            if prev_char == '>' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<':
+                # This is the closing tag, delete both opening and closing tag
+                text_widget.delete(f"{cursor_index} - 2c", f"{cursor_index} + 1c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 2c")
+                return "break"
+
+            elif prev_char == '-' and text_widget.get(f"{cursor_index} - 2c", cursor_index) == '<' and text_widget.get(f"{cursor_index} + 1c", f"{cursor_index} + 2c") == '-':
+                # This is the comment end '-->', delete both start and end
+                text_widget.delete(f"{cursor_index} - 4c", f"{cursor_index} + 3c")
+                text_widget.mark_set(tk.INSERT, f"{cursor_index} - 4c")
+                return "break"
+
+        return None   # Prevent inserting the closing character if it's already matched
+
+
+
+
+
+
 
 
 
@@ -424,6 +792,7 @@ class NCERTLearnIDE:
     def syntax_highlight(self, text_widget):
         # Get the content of the Text widget
         content = text_widget.get("1.0", "end-1c")
+
 
         # Remove previous tags
         for tag in text_widget.tag_names():

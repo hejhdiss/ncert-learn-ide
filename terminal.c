@@ -14,15 +14,15 @@ void execute_command(const char *command) {
         return;
     }
 
-    // Check if the command involves Python, pip, gcc, or g++
+    // Check if the command involves Python, pip, gcc, g++, or a venv script
     if (strstr(command, "python") == command) {  // Check if it starts with "python"
         // Construct the full path to python.exe in the "python" folder
-        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\python.exe\" %s", 
+        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\python.exe\" %s", 
                  current_dir, command + 6); // Skip "python " prefix
     } 
     else if (strstr(command, "pip") == command) {  // Check if it starts with "pip"
         // Construct the full path to pip using python.exe
-        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\python.exe\" -m pip %s", 
+        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\python.exe\" -m pip %s", 
                  current_dir, command + 4); // Skip "pip " prefix
     }
     else if (strstr(command, "gcc") == command || strstr(command, "g++") == command) {  // Check if it starts with "gcc" or "g++"
@@ -30,9 +30,14 @@ void execute_command(const char *command) {
         snprintf(exec_command, sizeof(exec_command), "\"%s\\gcc\\bin\\%s\" %s", 
                  current_dir, command, command + 4); // Skip "gcc " or "g++ " prefix
     } 
+    else if (strstr(command, "venv") == command) {  // Check if it starts with "venv"
+        // Construct the full path to a script in the venv Scripts directory
+        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\%s\"", 
+                 current_dir, command + 5); // Skip "venv " prefix
+    }
     else {
         // Block any other command and show an error
-        printf("Error: Invalid command. Only 'python', 'pip', 'gcc', and 'g++' are allowed.\n");
+        printf("Error: Invalid command. Only 'python', 'pip', 'gcc' and its associates, 'g++' and its associates, and 'venv' commands are allowed.\n");
         return;
     }
 
@@ -66,4 +71,3 @@ int main() {
 
     return 0;
 }
-
