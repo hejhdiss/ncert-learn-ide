@@ -22,8 +22,8 @@ Compression=lzma2
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SolidCompression=yes
-SetupIconFile="C:\Users\Muhammed Shafin P\OneDrive\Documents\some python in fleet\ncert_learn_ide\logo.ico"
-UninstallDisplayIcon="C:\Users\Muhammed Shafin P\OneDrive\Documents\some python in fleet\ncert_learn_ide\un.ico"
+SetupIconFile=C:\Users\Muhammed Shafin P\OneDrive\Documents\some python in fleet\ncert_learn_ide\logo.ico
+UninstallDisplayIcon=C:\Users\Muhammed Shafin P\OneDrive\Documents\some python in fleet\ncert_learn_ide\un.ico
 PrivilegesRequired=Admin
 CreateUninstallRegKey=no
 

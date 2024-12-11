@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
@@ -46,7 +46,7 @@ int main() {
             &pi           // Process information
     )) {
         // Wait for 10 seconds before closing the terminal
-        Sleep(1000); // Sleep for 10 seconds
+        Sleep(0); // Sleep for 10 seconds
 
         // Close process and thread handles
         CloseHandle(pi.hProcess);

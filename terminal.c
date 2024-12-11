@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
@@ -34,6 +34,24 @@ void execute_command(const char *command) {
         // Construct the full path to a script in the venv Scripts directory
         snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\%s\"", 
                  current_dir, command + 5); // Skip "venv " prefix
+    }
+    else if (strcmp(command, "help") == 0) {  // Check if it starts with "venv"
+        // Construct the full path to a script in the venv Scripts directory
+      printf(
+        "NCERT Learn IDE created by Muhammed Shafin P.\n\n"
+        "All Python-related commands are executed in the NCERT Learn IDE Python Environment.\n\n"
+        "Commands:\n"
+        "  python                - Run Python commands (virtual environment).\n"
+        "  pip                   - Manage Python packages using pip (virtual environment).\n"
+        "  gcc                   - Compile C programs using GCC.\n"
+        "  g++                   - Compile C++ programs using G++.\n"
+        "  [installed script]    - Run any Python environment-installed script (e.g., jupyter, pytest).\n"
+        "  Other MinGW64 tools   - Use other tools available in the MinGW64 environment (e.g., ld, c, ar, nm, objdump).\n"
+        "  venv                  - Run scripts from the Python virtual environment.\n"
+        "  help                  - Show this help information.\n"
+        "  exit                  - Exit NCERT Learn IDE Terminal.\n"
+    );
+        return;
     }
     else {
         // Block any other command and show an error

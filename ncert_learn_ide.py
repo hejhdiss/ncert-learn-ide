@@ -1,15 +1,26 @@
-import os
+import os  
 import subprocess
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox,simpledialog
 import keyword
 import re
+import shutil
+import time
+
+
+
 dghffh=''
+ssdshgh=[]
+numb=0
+ghhthg=''
+
+
 class NCERTLearnIDE:
     def __init__(self, root):
         self.root = root
         self.root.title("NCERT Learn IDE")
         self.root.geometry("800x600")  
+ 
 
 
         # Main menu
@@ -18,10 +29,13 @@ class NCERTLearnIDE:
         self.root.iconbitmap(r"./assert.ico") 
         
 
+        
+
         # File menu
         file_menu = tk.Menu(self.menu, tearoff=0)
         file_menu.add_command(label="New", command=self.new_file)
         file_menu.add_command(label="Open", command=self.open_file)
+        file_menu.add_command(label="Open Folder", command=self.open_folder)
         file_menu.add_command(label="Save", command=self.save_file)
         file_menu.add_command(label="Save As", command=self.save_as_file)
         file_menu.add_separator()
@@ -35,8 +49,8 @@ class NCERTLearnIDE:
 
         # View menu
         view_menu = tk.Menu(self.menu, tearoff=0)
-        view_menu.add_command(label="Dark Theme", command=self.set_dark_theme)
         view_menu.add_command(label="Light Theme", command=self.set_light_theme)
+        view_menu.add_command(label="Dark Theme", command=self.set_dark_theme)
         self.menu.add_cascade(label="View", menu=view_menu)
         about_menu = tk.Menu(self.menu, tearoff=0)
         about_menu.add_command(label="About", command=self.show_about_tab)
@@ -46,13 +60,304 @@ class NCERTLearnIDE:
         self.tab_control = ttk.Notebook(self.root)
         self.tab_control.pack(expand=1, fill="both")
         self.root.bind("<F5>", self.run_file_key)
+        self.selected_path = None
+        self.is_maximized = True  # Track the maximized state
+
+    def setup_folder_explorer(self):
+        """Set up the folder explorer frame and functionality."""
+        if hasattr(self, "folder_explorer_frame") and self.folder_explorer_frame.winfo_exists():
+            self.folder_explorer_frame.destroy()
+
+        self.folder_explorer_frame = ttk.Frame(self.root, width=200)
+        self.folder_explorer_frame.pack(side="left", fill="y", padx=5, pady=5)
+
+        # Button frame for close, minimize, and maximize buttons
+        button_frame = ttk.Frame(self.folder_explorer_frame)
+        button_frame.pack(side="top", fill="x", pady=5)
+
+        close_button = ttk.Button(button_frame, text="X", width=3, command=self.close_folder_explorer)
+        close_button.pack(side="right", padx=5)
+        
+        minimize_button = ttk.Button(button_frame, text="–", width=3, command=self.minimize_folder_explorer)
+        minimize_button.pack(side="left", padx=5)
+
+        maximize_button = ttk.Button(button_frame, text="□", width=3,command=self.toggle_maximize )
+        maximize_button.pack(side="left", padx=5)
+
+        folder_label = ttk.Label(self.folder_explorer_frame, text="Folder Explorer", anchor="center", font=("Arial", 10, "bold"))
+        folder_label.pack(pady=5)
+
+        self.folder_tree = ttk.Treeview(self.folder_explorer_frame, show="tree")
+        self.folder_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Event bindings
+        self.folder_tree.bind("<<TreeviewSelect>>", self.on_folder_item_selected)
+        self.folder_tree.bind("<Double-1>", self.open_file_double_click)
+
+        # Scrollbar for folder tree
+
+        # Context menu for right-click
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Rename", command=self.rename_item)
+        self.context_menu.add_command(label="Delete", command=self.delete_item)
+        self.context_menu.add_command(label="Open Folder", command=self.open_folder_in_explorer)
+        self.context_menu.add_command(label="Show Properties", command=self.show_properties)
+        self.folder_tree.bind("<Button-3>", self.show_context_menu)
+
+        # Button to expand/collapse all nodes
+        self.expand_button = ttk.Button(self.folder_explorer_frame, text="Expand All", command=self.expand_all)
+        self.expand_button.pack(side="bottom", pady=5)
+        
+        
+    def toggle_maximize(self):
+        if ghhthg!='':
+            self.setup_folder_explorer()  # Create folder explorer dynamically
+            root_node = self.folder_tree.insert("", "end", text=ghhthg, open=True)
+            self._populate_tree(root_node, ghhthg)
+            
+            
         
 
 
+    def open_folder(self):
+        """Open a folder and display its contents in the folder explorer."""
+        global ghhthg
+        folder_path = filedialog.askdirectory(title="Select Folder")
+        ghhthg=folder_path
+        if folder_path:
+            self.setup_folder_explorer()  # Create folder explorer dynamically
+            root_node = self.folder_tree.insert("", "end", text=folder_path, open=True)
+            self._populate_tree(root_node, folder_path)
+
+    def close_folder_explorer(self):
+        """Close the folder explorer."""
+        if hasattr(self, "folder_explorer_frame") and self.folder_explorer_frame.winfo_exists():
+            self.folder_explorer_frame.destroy()
+
+    def minimize_folder_explorer(self):
+        """Toggle the visibility of the folder explorer."""
+        if hasattr(self, "folder_tree") and self.folder_tree.winfo_exists():
+            self.folder_tree.pack_forget()
+        else:
+            self.folder_tree.pack(fill="both", expand=True, padx=5, pady=5)
+        self.is_maximized=False
+
+    def _populate_tree(self, parent, path):
+        """Recursively populate the tree view with folder contents."""
+        try:
+            for item in os.listdir(path):
+                item_path = os.path.join(path, item)
+                if os.path.isdir(item_path):
+                    folder_node = self.folder_tree.insert(parent, "end", text=item, open=False)
+                    self._populate_tree(folder_node, item_path)
+                else:
+                    self.folder_tree.insert(parent, "end", text=item)
+        except PermissionError:
+            pass  # Skip folders/files without access
+
+    def on_folder_item_selected(self, event):
+        """Handle the selection of items in the folder explorer."""
+        selected_item = self.folder_tree.selection()
+        if selected_item:
+            item_text = self.folder_tree.item(selected_item, "text")
+            parent_item = self.folder_tree.parent(selected_item)
+            parent_path = self.folder_tree.item(parent_item, "text") if parent_item else ""
+            self.selected_path = os.path.join(parent_path, item_text)
+
+    def show_context_menu(self, event):
+        """Show the context menu on right-click."""
+        # Open the context menu on right-click over a folder or file
+        self.context_menu.post(event.x_root, event.y_root)
+
+    def rename_item(self):
+        """Rename the selected item."""
+        selected_item = self.folder_tree.selection()
+        if selected_item:
+            current_name = self.folder_tree.item(selected_item, "text")
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Rename")
+            dialog.iconbitmap(r'./assert.ico')  # Set the icon for the dialog
+
+            # Create the prompt label
+            label = tk.Label(dialog, text="Enter new name:")
+            label.pack(pady=10)
+
+            # Entry widget for the new name
+            entry = tk.Entry(dialog)
+            entry.insert(0, current_name)  # Set the current name as the initial value
+            entry.pack(pady=5)
+
+            # Function to handle the renaming action
+            def on_rename():
+                new_name = entry.get().strip()
+                if new_name:
+                    parent_item = self.folder_tree.parent(selected_item)
+                    parent_path = self.folder_tree.item(parent_item, "text") if parent_item else ""
+                    old_path = os.path.join(parent_path, current_name)
+                    new_path = os.path.join(parent_path, new_name)
+
+                    if os.path.exists(old_path):
+                        try:
+                            os.rename(old_path, new_path)  # Rename the file or folder
+                            self.folder_tree.item(selected_item, text=new_name)  # Update the tree view
+                            dialog.destroy()  # Close the dialog after renaming
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Error renaming item: {e}")
+                    else:
+                        messagebox.showerror("Error", "Item not found!")
+                else:
+                    messagebox.showwarning("Warning", "Please enter a valid name.")
+
+            # Button to trigger the rename
+            rename_button = tk.Button(dialog, text="Rename", command=on_rename)
+            rename_button.pack(pady=10)
+
+            # Button to cancel
+            cancel_button = tk.Button(dialog, text="Cancel", command=dialog.destroy)
+            cancel_button.pack(pady=5)
+
+            # Center the dialog window on the screen
+            dialog.geometry(f"300x150+{self.root.winfo_x() + 100}+{self.root.winfo_y() + 100}")
+
+    def delete_item(self):
+        """Delete the selected item."""
+        selected_item = self.folder_tree.selection()
+        if selected_item:
+            item_name = self.folder_tree.item(selected_item, "text")
+            parent_item = self.folder_tree.parent(selected_item)
+            parent_path = self.folder_tree.item(parent_item, "text") if parent_item else ""
+            item_path = os.path.join(parent_path, item_name)
+
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Delete")
+            dialog.iconbitmap(r'./assert.ico')  # Set the icon for the dialog
+
+            # Create the message label
+            label = tk.Label(dialog, text=f"Are you sure you want to delete {item_name}? (Y/N)")
+            label.pack(pady=10)
+
+    # Function to handle the user's response
+            def on_confirm(response):
+                if response.lower() == "y":
+                    try:
+                        if os.path.isdir(item_path):
+                            shutil.rmtree(item_path)  # Use shutil to remove non-empty directories
+                        else:
+                            os.remove(item_path)
+                        self.folder_tree.delete(selected_item)
+                        dialog.destroy()  # Close the dialog after the action
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Error deleting item: {e}")
+                else:
+                    dialog.destroy()  # Close the dialog if user cancels
+
+            # Create buttons for confirmation
+            yes_button = tk.Button(dialog, text="Yes", command=lambda: on_confirm("y"))
+            yes_button.pack(side=tk.LEFT, padx=20, pady=10)
+
+            no_button = tk.Button(dialog, text="No", command=lambda: on_confirm("n"))
+            no_button.pack(side=tk.RIGHT, padx=20, pady=10)
+
+            # Center the dialog window on the screen
+            dialog.geometry(f"300x150+{self.root.winfo_x() + 100}+{self.root.winfo_y() + 100}")
+
+
+
+    def open_folder_in_explorer(self):
+        """Open the selected folder in File Explorer."""
+        os.startfile(self.selected_path)
+
+    def show_properties(self):
+        """Show properties of the selected file/folder."""
+        selected_item = self.folder_tree.selection()
+        if selected_item:
+            item_name = self.folder_tree.item(selected_item, "text")
+            parent_item = self.folder_tree.parent(selected_item)
+            parent_path = self.folder_tree.item(parent_item, "text") if parent_item else ""
+            item_path = os.path.join(parent_path, item_name)
+
+            # Get the full absolute path
+            full_path = os.path.abspath(item_path)
+
+            try:
+                stats = os.stat(full_path)
+                size = stats.st_size
+                created = stats.st_ctime
+                modified = stats.st_mtime
+                properties_message = (f"Name: {item_name}\n"
+                                    f"Path: {full_path}\n"
+                                    f"Size: {size} bytes\n"
+                                    f"Created: {created}\n"
+                                    f"Modified: {modified}")
+                messagebox.showinfo("Properties", properties_message)
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not retrieve properties: {e}")
+
+    def open_file_double_click(self, event):
+        """Open file in a new tab when double-clicked."""
+        selected_item = self.folder_tree.selection()
+        if selected_item:
+            item_name = self.folder_tree.item(selected_item, "text")
+            parent_item = self.folder_tree.parent(selected_item)
+            parent_path = self.folder_tree.item(parent_item, "text") if parent_item else ""
+            file_path = os.path.join(parent_path, item_name)
+
+            # Check if it's a valid file
+            if os.path.isfile(file_path):
+                try:
+                    # Read the content of the file
+                    with open(file_path, "r") as file:
+                        content = file.read()
+
+                    # Create a new tab with the file content
+                    new_tab = self.create_tab(file_path, content)
+
+                    # Select the newly created tab (ensure it's focused)
+                    self.tab_control.select(new_tab)
+
+                except Exception as e:
+                    messagebox.showerror("Error", f"Could not open file: {e}")
+
+    def expand_all(self):
+            """Expand all nodes in the tree view."""
+            for item in self.folder_tree.get_children():
+                self._expand_node(item)
+
+    def _expand_node(self, node):
+        """Recursively expand all child nodes of the given node."""
+        self.folder_tree.item(node, open=True)
+        for child in self.folder_tree.get_children(node):
+            self._expand_node(child)
+
+
+
+
+
+
+
+
+
+        
+   
+
+
+        
+
+
+    
+
+
     def new_file(self):
-        new_tab = self.create_tab("Untitled")
-        self.tab_control.add(new_tab, text="Untitled")
-        self.tab_control.select(new_tab)
+        global numb
+        if numb==0:
+            new_tab = self.create_tab("Untitled")
+            self.tab_control.add(new_tab, text="Untitled")
+            self.tab_control.select(new_tab)
+        else:
+            new_tab = self.create_tab(f"Untitled{numb}")
+            self.tab_control.add(new_tab, text=f"Untitled{numb}")
+            self.tab_control.select(new_tab)
+        numb+=1
 
     def open_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Python Files", "*.py"), ("HTML Files", "*.html"),("C Files", "*.c"),("C++ Files", "*.cpp"),("Text Files","*.txt"), ("Readme Files","*.readme"),( "Markdown Files","*.md"), ("JSON Files","*.json"), ("XML Files","*.xml"),("CSS Files",".css"),("JavaScript Files",".js") ,("All Files", "*.*")])
@@ -68,36 +373,36 @@ class NCERTLearnIDE:
             self.tab_control.select(new_tab)
    
     def show_about_tab(self):
-        # Create a new tab
-        about_tab = tk.Frame(self.tab_control)
-        self.tab_control.add(about_tab, text="About")
+        # Create a new Toplevel window
+        about_window = tk.Toplevel(self.root)
+        about_window.title("About NCERT Learn IDE")
+        about_window.geometry("300x200")
 
-        # Add content to the tab
-        label = tk.Label(about_tab, text="NCERT Learn IDE\nVersion 1.0\nCreated for learning and coding\nBy Muhammed Shafin P.", font=("Arial", 12))
+        # Set the icon
+        try:
+            about_window.iconbitmap("assert.ico")  # Ensure the file 'assert.ico' is in the same directory
+        except Exception as e:
+            print(f"Error setting icon: {e}")
+
+        # Add content to the window
+        label = tk.Label(about_window, text="NCERT Learn IDE\nVersion 1.0\nCreated for learning and coding\nBy Muhammed Shafin P.",
+                         font=("Arial", 12), justify="center")
         label.pack(pady=20)
 
         # Add a close button
-        close_button = tk.Button(about_tab, text="Close", bg="red", fg="white",
-                                 command=lambda: self.close_tab(about_tab))
+        close_button = tk.Button(about_window, text="Close", bg="red", fg="white", command=about_window.destroy)
         close_button.pack(pady=10)
 
-        # Switch to the new tab
-        self.tab_control.select(about_tab)
 
-    def close_tab(self, tab):
-        """Remove a specific tab."""
-        self.tab_control.forget(tab)
 
+ 
+
+    
 
 
 
-    def save_file(self):
-        current_tab = self.tab_control.nametowidget(self.tab_control.select())
-        file_path = current_tab.file_path
-        if file_path == "Untitled":
-            self.save_as_file()
-        else:
-            self._write_to_file(file_path, current_tab.text_widget.get("1.0", "end-1c"))
+
+
 
     def save_as_file(self):
         current_tab = self.tab_control.nametowidget(self.tab_control.select())
@@ -106,6 +411,7 @@ class NCERTLearnIDE:
             current_tab.file_path = file_path
             self._write_to_file(file_path, current_tab.text_widget.get("1.0", "end-1c"))
             self.tab_control.tab(current_tab, text=os.path.basename(file_path))
+        return True
     def run_file_key(self, event=None):
         """Trigger the run_file method when F5 is pressed."""
         self.root.focus_set()  # Ensure focus is on the main window
@@ -139,7 +445,9 @@ class NCERTLearnIDE:
 
         # Check if executables exist
         if not os.path.exists(python_path):
-            self.show_terminal_output("", f"Python executable not found at {python_path}/nPLease use NCERT Learn IDE Reset Python Environmet to restore python environment.", current_tab)
+            self.show_terminal_output("", f"""Python executable not found at {python_path}
+Please use NCERT Learn IDE Reset Python Environmet to restore python environment.
+""", current_tab)
             return
         if not os.path.exists(gcc_path):
             self.show_terminal_output("", f"GCC executable not found at {gcc_path}", current_tab)
@@ -147,11 +455,17 @@ class NCERTLearnIDE:
         if not os.path.exists(gpp_path):
             self.show_terminal_output("", f"G++ executable not found at {gpp_path}", current_tab)
             return
+        global numb
 
         # Handle Untitled file and save
         if file_path == "Untitled":
             self.save_as_file()
             file_path = current_tab.file_path
+            self.run_file()
+        elif file_path == f"Untitled{numb}":
+            self.save_as_file()
+            file_path = current_tab.file_path
+            self.run_file()
                     # Write paths to text files
 
 
@@ -200,9 +514,9 @@ class NCERTLearnIDE:
                 self.show_terminal_output("", f"Failed to save file: {str(e)}", current_tab)
 
         else:
-            self.save_file()
             self.show_terminal_output("Unsupported File", "Cannot run this type of file. You can save it instead.", current_tab)
-            self.save_file()
+            self.save_as_file()
+            self.run_file()
         
 
 
@@ -305,7 +619,12 @@ class NCERTLearnIDE:
     def set_dark_theme(self):
         for tab_id in self.tab_control.tabs():
             tab = self.tab_control.nametowidget(tab_id)
-            tab.text_widget.configure(bg="black", fg="white", insertbackground="black")
+            tab.text_widget.configure(bg="#000111", fg="white", insertbackground="white")
+    
+                    
+                
+                
+            
 
 
 
@@ -315,137 +634,149 @@ class NCERTLearnIDE:
 
 
     def create_tab(self, file_path, content=""):
-        # Create a frame for the tab content
-        frame = ttk.Frame(self.tab_control)
-        frame.file_path = file_path 
-        global dghffh
-        dghffh =file_path  # Store the file path in the frame
+        global ssdshgh
+        if file_path not in ssdshgh:  
+            ssdshgh.append(file_path)              
+            # Create a frame for the tab content
+            frame = ttk.Frame(self.tab_control)
+            frame.file_path = file_path 
+            global dghffh
+            dghffh =file_path  # Store the file path in the frame
 
-        # Create a Text widget for editing
-        text_widget = tk.Text(frame, wrap="none", undo=True)
-        text_widget.pack(side="left", expand=1, fill="both", padx=5, pady=5)
-        frame.text_widget = text_widget
-        # Add auto-completion for Python files
-        if file_path.endswith(".py"):
-            text_widget.bind("<KeyRelease>", lambda event: self.pyautocomplete(event, text_widget))
-        if file_path.endswith((".html", ".css", ".js",".xml")):
-            text_widget.bind("<KeyRelease>", lambda event: self.htmlautocomplete(event, text_widget))
-        if file_path.endswith((".c", ".cpp")):
-            text_widget.bind("<KeyRelease>", lambda event: self.cautocomplete(event, text_widget))
-        if file_path.endswith(".xml"):
-            text_widget.bind("<KeyRelease>", lambda event: self.xmlautocomplete(event, text_widget))
-
-
-        # Define the tags for highlighting with advanced colors
-        text_widget.tag_configure("keyword", foreground="#0000CD")
-        text_widget.tag_configure("comment", foreground="#006400")
-        text_widget.tag_configure("string", foreground="#8B0000")
-        text_widget.tag_configure("function", foreground="#8A2BE2")
-        text_widget.tag_configure("class", foreground="#00008B")
-        text_widget.tag_configure("import_lib", foreground="#20B2AA")
-        text_widget.tag_configure("import_func", foreground="#FF6347")
-        text_widget.tag_configure("variable", foreground="#006400")
-        text_widget.tag_configure("number", foreground="#FF1493")
-        text_widget.tag_configure("operator", foreground="#FF4500")
-        text_widget.tag_configure("html_tag", foreground="#A52A2A")
-        text_widget.tag_configure("html_attr", foreground="#D2691E")
-        text_widget.tag_configure("html_comment", foreground="#808080")
-        text_widget.tag_configure("html_string", foreground="#DC143C")
-        text_widget.tag_configure("js_keyword", foreground="#0000CD")
-        text_widget.tag_configure("js_function", foreground="#32CD32")
-        text_widget.tag_configure("js_comment", foreground="#2F4F4F")
-        # Syntax highlighting tags for C and C++ files
-        text_widget.tag_configure("c_keyword", foreground="#0000CD")
-        text_widget.tag_configure("c_comment", foreground="#006400")
-        text_widget.tag_configure("c_string", foreground="#8B0000")
-        text_widget.tag_configure("c_function", foreground="#8A2BE2")
-        text_widget.tag_configure("c_number", foreground="#FF1493")
-        text_widget.tag_configure("c_operator", foreground="#FF4500")
-        text_widget.tag_configure("css_selector", foreground="#00008B")
-        text_widget.tag_configure("css_property", foreground="#8A2BE2")
-        text_widget.tag_configure("css_value", foreground="#FF4500")
-        text_widget.tag_configure("css_comment", foreground="#006400")
-
-        # Syntax highlighting tags for Markdown files
-        text_widget.tag_configure("markdown_header", foreground="#00008B")
-        text_widget.tag_configure("markdown_bold", foreground="#8B0000")
-        text_widget.tag_configure("markdown_italic", foreground="#006400")
-
-        # Syntax highlighting tags for JSON and XML
-        text_widget.tag_configure("json_key", foreground="#8A2BE2")
-        text_widget.tag_configure("json_string", foreground="#8B0000")
-        text_widget.tag_configure("json_number", foreground="#FF1493")
-        text_widget.tag_configure("xml_tag", foreground="#A52A2A")
-        text_widget.tag_configure("xml_attr", foreground="#D2691E")
-        text_widget.tag_configure("xml_string", foreground="#DC143C")
-        # Define tags for special characters like () [] {} <>
-        text_widget.tag_configure("double_quotes", foreground="#FF1493")  # For ""
-        text_widget.tag_configure("single_quotes", foreground="#8A2BE2")  # For ''
-        text_widget.tag_configure("triple_double_quotes", foreground="#32CD32")  # For """ """
-        text_widget.tag_configure("triple_single_quotes", foreground="#FFD700")  # For ''' '''
-        text_widget.tag_configure("html_tag", foreground="#A52A2A")  # For < >
-        text_widget.tag_configure("html_end_tag", foreground="#A52A2A")  # For </>
+            # Create a Text widget for editing
+            text_widget = tk.Text(frame, wrap="none", undo=True)
+            text_widget.pack(side="left", expand=1, fill="both", padx=5, pady=5)
+            frame.text_widget = text_widget
+            # Add auto-completion for Python files
+            if file_path.endswith(".py"):
+                text_widget.bind("<KeyRelease>", lambda event: self.pyautocomplete(event, text_widget))
+            if file_path.endswith((".html", ".css", ".js",".xml")):
+                text_widget.bind("<KeyRelease>", lambda event: self.htmlautocomplete(event, text_widget))
+            if file_path.endswith((".c", ".cpp")):
+                text_widget.bind("<KeyRelease>", lambda event: self.cautocomplete(event, text_widget))
+            if file_path.endswith(".xml"):
+                text_widget.bind("<KeyRelease>", lambda event: self.xmlautocomplete(event, text_widget))
 
 
-        # Insert content if available
-        if content:
-            text_widget.insert("1.0", content)
+            # Define the tags for highlighting with advanced colors
+            text_widget.tag_configure("keyword", foreground="#0000CD")
+            text_widget.tag_configure("comment", foreground="#006400")
+            text_widget.tag_configure("string", foreground="#8B0000")
+            text_widget.tag_configure("function", foreground="#8A2BE2")
+            text_widget.tag_configure("class", foreground="#00008B")
+            text_widget.tag_configure("import_lib", foreground="#20B2AA")
+            text_widget.tag_configure("import_func", foreground="#FF6347")
+            text_widget.tag_configure("variable", foreground="#006400")
+            text_widget.tag_configure("number", foreground="#FF1493")
+            text_widget.tag_configure("operator", foreground="#FF4500")
+            text_widget.tag_configure("html_tag", foreground="#A52A2A")
+            text_widget.tag_configure("html_attr", foreground="#D2691E")
+            text_widget.tag_configure("html_comment", foreground="#808080")
+            text_widget.tag_configure("html_string", foreground="#DC143C")
+            text_widget.tag_configure("js_keyword", foreground="#0000CD")
+            text_widget.tag_configure("js_function", foreground="#32CD32")
+            text_widget.tag_configure("js_comment", foreground="#2F4F4F")
+            # Syntax highlighting tags for C and C++ files
+            text_widget.tag_configure("c_keyword", foreground="#0000CD")
+            text_widget.tag_configure("c_comment", foreground="#006400")
+            text_widget.tag_configure("c_string", foreground="#8B0000")
+            text_widget.tag_configure("c_function", foreground="#8A2BE2")
+            text_widget.tag_configure("c_number", foreground="#FF1493")
+            text_widget.tag_configure("c_operator", foreground="#FF4500")
+            text_widget.tag_configure("css_selector", foreground="#00008B")
+            text_widget.tag_configure("css_property", foreground="#8A2BE2")
+            text_widget.tag_configure("css_value", foreground="#FF4500")
+            text_widget.tag_configure("css_comment", foreground="#006400")
 
-            # Apply syntax highlighting after inserting content
-            self.syntax_highlight(text_widget)
+            # Syntax highlighting tags for Markdown files
+            text_widget.tag_configure("markdown_header", foreground="#00008B")
+            text_widget.tag_configure("markdown_bold", foreground="#8B0000")
+            text_widget.tag_configure("markdown_italic", foreground="#006400")
 
-        # Add vertical scroll buttons (Up and Down buttons)
-        up_button = ttk.Button(frame, text="↑", width=2, command=lambda: self.scroll_up(text_widget))
-        down_button = ttk.Button(frame, text="↓", width=2, command=lambda: self.scroll_down(text_widget))
-
-        # Position the buttons on the right side of the frame
-        up_button.pack(side="right", pady=(5, 0), anchor="n")
-        down_button.pack(side="right", pady=(0, 5), anchor="s")
-
-        # Add left and right buttons for horizontal scrolling
-        left_button = ttk.Button(frame, text="←", width=2, command=lambda: self.scroll_left(text_widget))
-        right_button = ttk.Button(frame, text="→", width=2, command=lambda: self.scroll_right(text_widget))
-
-        # Position the horizontal buttons at the bottom
-        left_button.pack(side="bottom", padx=5, anchor="w")
-        right_button.pack(side="bottom", padx=5, anchor="e")
-
-        run_button = ttk.Button(frame, text="Run", command=lambda: self.run_file())
-        run_button.pack(side="bottom", pady=(10, 5))
-        increase_button = ttk.Button(frame, text="+", command=lambda: self.increase_font_size(text_widget))
-        decrease_button = ttk.Button(frame, text="-", command=lambda: self.decrease_font_size(text_widget))
-
-# Position the buttons on the top right corner
-        increase_button.pack(side="top", padx=5, pady=5, anchor="ne")
-        decrease_button.pack(side="top", padx=5, pady=5, anchor="ne")
-
-        # Enable mouse scroll wheel to work with the Text widget (for vertical scrolling)
-        text_widget.bind("<MouseWheel>", lambda event: self.on_mouse_wheel(event, text_widget))
-        text_widget.bind("<Control-s>", lambda event: self.save_file())
-        text_widget.bind("<F5>", lambda event: self.run_file())
-
-        # Set the tab title based on the file name or "Untitled"
-        tab_name = os.path.basename(file_path) if file_path != "Untitled" else "Untitled"
-
-        # Add the tab to the notebook with a close button
-        self.tab_control.add(frame, text=tab_name)
+            # Syntax highlighting tags for JSON and XML
+            text_widget.tag_configure("json_key", foreground="#8A2BE2")
+            text_widget.tag_configure("json_string", foreground="#8B0000")
+            text_widget.tag_configure("json_number", foreground="#FF1493")
+            text_widget.tag_configure("xml_tag", foreground="#A52A2A")
+            text_widget.tag_configure("xml_attr", foreground="#D2691E")
+            text_widget.tag_configure("xml_string", foreground="#DC143C")
+            # Define tags for special characters like () [] {} <>
+            text_widget.tag_configure("double_quotes", foreground="#FF1493")  # For ""
+            text_widget.tag_configure("single_quotes", foreground="#8A2BE2")  # For ''
+            text_widget.tag_configure("triple_double_quotes", foreground="#32CD32")  # For """ """
+            text_widget.tag_configure("triple_single_quotes", foreground="#FFD700")  # For ''' '''
+            text_widget.tag_configure("html_tag", foreground="#A52A2A")  # For < >
+            text_widget.tag_configure("html_end_tag", foreground="#A52A2A")  # For </>
 
 
-        # Create a close button and attach it to the tab
-        close_button = tk.Button(
-            frame,
-            text="X",
-            command=lambda: self.close_tab(frame),
-            relief="flat",
-            bg="red",
-            fg="white",
-            width=2
-        )
-        # Adjust placement to move it further down
-        close_button.place(relx=0.98, rely=0.5, anchor="ne")  # Move halfway down the right side
+            # Insert content if available
+            if content:
+                text_widget.insert("1.0", content)
 
-        # Return the created frame
-        return frame
+                # Apply syntax highlighting after inserting content
+                self.syntax_highlight(text_widget)
+
+            # Add vertical scroll buttons (Up and Down buttons)
+            up_button = ttk.Button(frame, text="↑", width=2, command=lambda: self.scroll_up(text_widget))
+            down_button = ttk.Button(frame, text="↓", width=2, command=lambda: self.scroll_down(text_widget))
+
+            # Position the buttons on the right side of the frame
+            up_button.pack(side="right", pady=(5, 0), anchor="n")
+            down_button.pack(side="right", pady=(0, 5), anchor="s")
+
+            # Add left and right buttons for horizontal scrolling
+            left_button = ttk.Button(frame, text="←", width=2, command=lambda: self.scroll_left(text_widget))
+            right_button = ttk.Button(frame, text="→", width=2, command=lambda: self.scroll_right(text_widget))
+
+            # Position the horizontal buttons at the bottom
+            left_button.pack(side="bottom", padx=5, anchor="w")
+            right_button.pack(side="bottom", padx=5, anchor="e")
+
+            run_button = ttk.Button(frame, text="Run", command=lambda: self.run_file())
+            run_button.pack(side="bottom", pady=(10, 5))
+            increase_button = ttk.Button(frame, text="+", command=lambda: self.increase_font_size(text_widget))
+            decrease_button = ttk.Button(frame, text="-", command=lambda: self.decrease_font_size(text_widget))
+
+    # Position the buttons on the top right corner
+            increase_button.pack(side="top", padx=5, pady=5, anchor="ne")
+            decrease_button.pack(side="top", padx=5, pady=5, anchor="ne")
+
+            # Enable mouse scroll wheel to work with the Text widget (for vertical scrolling)
+            text_widget.bind("<MouseWheel>", lambda event: self.on_mouse_wheel(event, text_widget))
+            text_widget.bind("<Control-s>", lambda event: self.save_file())
+            text_widget.bind("<F5>", lambda event: self.run_file())
+
+            # Set the tab title based on the file name or "Untitled"
+            tab_name = os.path.basename(file_path) if file_path != "Untitled" else "Untitled"
+
+            # Add the tab to the notebook with a close button
+            self.tab_control.add(frame, text=tab_name)
+
+
+            # Create a close button and attach it to the tab
+            close_button = tk.Button(
+                frame,
+                text="X",
+                command=lambda: self.close_tab(frame),
+                relief="flat",
+                bg="red",
+                fg="white",
+                width=2
+            )
+            # Adjust placement to move it further down
+            close_button.place(relx=0.98, rely=0.5, anchor="ne")  # Move halfway down the right side
+
+            # Return the created frame
+            return frame
+        else:
+            # Bring the existing tab into focus
+            for tab in self.tab_control.tabs():
+                tab_frame = self.tab_control.nametowidget(tab)
+                if hasattr(tab_frame, "file_path") and tab_frame.file_path == file_path:
+                    self.tab_control.select(tab_frame)
+                    break
+        
+        
     def increase_font_size(self, text_widget):
         current_font = text_widget.cget("font")  # Get the current font setting
         if current_font:
@@ -1021,19 +1352,83 @@ class NCERTLearnIDE:
 
 
     def close_tab(self, frame):
-        """Close the tab and remove its associated content."""
-        self.tab_control.forget(frame)  # Remove the tab from the notebook
+        """Close the specified tab and handle unsaved files."""
+        # Get the file path associated with the tab
+        current_tab = self.tab_control.nametowidget(self.tab_control.select())
+        file_path = current_tab.file_path
 
+        # Check if there are unsaved changes
+        if self._has_unsaved_changes(frame):
+            # Prompt the user to save, discard, or cancel
+            response = messagebox.askyesnocancel(
+                "Save Changes?",
+                f"Do you want to save changes to {file_path}?"
+            )
 
+            if response is True:  # User chose Yes (Save and close)
+                if self.save_file():  # Save using a unified save logic
+                    self._remove_tab(frame)  # Close the tab after saving
+            elif response is False:  # User chose No (Close without saving)
+                self._remove_tab(frame)
+            # If response is None (Cancel), do nothing
+        elif file_path.startswith('Untitled'):
+                        # Prompt the user to save, discard, or cancel
+            response = messagebox.askyesnocancel(
+                "Save Changes?",
+                f"Do you want to save changes to {file_path}?"
+            )
 
+            if response is True:  # User chose Yes (Save and close)
+                if self.save_as_file():  # Save using a unified save logic
+                    self._remove_tab(frame)  # Close the tab after saving
+            elif response is False:  # User chose No (Close without saving)
+                self._remove_tab(frame)
+            
+        else:
+            # No unsaved changes, close the tab directly
+            self._remove_tab(frame)
 
+    def _has_unsaved_changes(self, frame):
+        """Check if the text in the frame has unsaved changes."""
+        text_widget=frame.text_widget
+        if text_widget is None:
+            return False
+        return text_widget.edit_modified()  # Check if the text widget is modified
 
+    def _remove_tab(self, frame):
+        """Helper function to remove a tab."""
+        try:
+            # Get the index of the tab and remove it
+            tab_id = self.tab_control.index(frame)
+            self.tab_control.forget(tab_id)
+
+            # Remove the file path from the global list
+            file_path = getattr(frame, "file_path", None)
+            if file_path and file_path in ssdshgh:
+                ssdshgh.remove(file_path)
+
+            # Destroy the frame
+            frame.destroy()
+        except Exception as e:
+            print(f"Error removing tab: {e}")
+    def save_file(self):
+        global numb
+        current_tab = self.tab_control.nametowidget(self.tab_control.select())
+        file_path = current_tab.file_path
+        if file_path.startswith("Untitled") :
+            self.save_as_file()
+        else:
+            self._write_to_file(file_path, current_tab.text_widget.get("1.0", "end-1c"))
+        return True
 
     def _write_to_file(self, file_path, content):
         with open(file_path, "w") as file:
             file.write(content)
 
+
 if __name__ == "__main__":
     root = tk.Tk()
     ide = NCERTLearnIDE(root)
     root.mainloop()
+    
+    
