@@ -1,4 +1,4 @@
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
@@ -14,48 +14,49 @@ void execute_command(const char *command) {
         return;
     }
 
+    // Enclose the current directory in quotes for paths with spaces
+    char quoted_current_dir[MAX_PATH];
+    snprintf(quoted_current_dir, sizeof(quoted_current_dir), "\"%s\"", current_dir);
+
     // Check if the command involves Python, pip, gcc, g++, or a venv script
     if (strstr(command, "python") == command) {  // Check if it starts with "python"
         // Construct the full path to python.exe in the "python" folder
         snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\python.exe\" %s", 
-                 current_dir, command + 6); // Skip "python " prefix
+                 quoted_current_dir, command + 6); // Skip "python " prefix
     } 
     else if (strstr(command, "pip") == command) {  // Check if it starts with "pip"
         // Construct the full path to pip using python.exe
         snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\python.exe\" -m pip %s", 
-                 current_dir, command + 4); // Skip "pip " prefix
+                 quoted_current_dir, command + 4); // Skip "pip " prefix
     }
     else if (strstr(command, "gcc") == command || strstr(command, "g++") == command) {  // Check if it starts with "gcc" or "g++"
         // Construct the full path to gcc or g++ in the "gcc/bin" folder
-        snprintf(exec_command, sizeof(exec_command), "\"%s\\gcc\\bin\\%s\" %s", 
-                 current_dir, command, command + 4); // Skip "gcc " or "g++ " prefix
+        snprintf(exec_command, sizeof(exec_command), "\"%s\\gcc\\bin\\%s.exe\" %s", 
+                 quoted_current_dir, command, command + 4); // Skip "gcc " or "g++ " prefix
     } 
     else if (strstr(command, "venv") == command) {  // Check if it starts with "venv"
         // Construct the full path to a script in the venv Scripts directory
-        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\%s\"", 
-                 current_dir, command + 5); // Skip "venv " prefix
+        snprintf(exec_command, sizeof(exec_command), "\"%s\\python\\venv\\Scripts\\%s.exe\" %s", 
+                 quoted_current_dir, command + 5); // Skip "venv " prefix
     }
-    else if (strcmp(command, "help") == 0) {  // Check if it starts with "venv"
-        // Construct the full path to a script in the venv Scripts directory
-      printf(
-        "NCERT Learn IDE created by Muhammed Shafin P.\n\n"
-        "All Python-related commands are executed in the NCERT Learn IDE Python Environment.\n\n"
-        "Commands:\n"
-        "  python                - Run Python commands (virtual environment).\n"
-        "  pip                   - Manage Python packages using pip (virtual environment).\n"
-        "  gcc                   - Compile C programs using GCC.\n"
-        "  g++                   - Compile C++ programs using G++.\n"
-        "  [installed script]    - Run any Python environment-installed script (e.g., jupyter, pytest).\n"
-        "  Other MinGW64 tools   - Use other tools available in the MinGW64 environment (e.g., ld, c, ar, nm, objdump).\n"
-        "  venv                  - Run scripts from the Python virtual environment.\n"
-        "  help                  - Show this help information.\n"
-        "  exit                  - Exit NCERT Learn IDE Terminal.\n"
-    );
+    else if (strcmp(command, "help") == 0) {  // Help command
+        printf(
+            "NCERT Learn IDE created by Muhammed Shafin P.\n\n"
+            "All Python-related commands are executed in the NCERT Learn IDE Python Environment.\n\n"
+            "Commands:\n"
+            "  python                - Run Python commands (virtual environment).\n"
+            "  pip                   - Manage Python packages using pip (virtual environment).\n"
+            "  gcc                   - Compile C programs using GCC.\n"
+            "  g++                   - Compile C++ programs using G++.\n"
+            "  [installed script]    - Run any Python environment-installed script (e.g., jupyter, pytest).\n"
+            "  help                  - Show this help information.\n"
+            "  exit                  - Exit NCERT Learn IDE Terminal.\n"
+        );
         return;
     }
     else {
         // Block any other command and show an error
-        printf("Error: Invalid command. Only 'python', 'pip', 'gcc' and its associates, 'g++' and its associates, and 'venv' commands are allowed.\n");
+        printf("Error: Invalid command. Only 'python', 'pip', 'gcc' and its associates, 'g++' and its associates, and 'venv' commands are allowed.\nType help to get help information\n");
         return;
     }
 
